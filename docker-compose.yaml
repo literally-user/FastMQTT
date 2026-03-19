@@ -1,0 +1,32 @@
+services:
+  artemis:
+    image: apache/activemq-artemis:latest-alpine
+    environment:
+      ANONYMOUS_LOGIN: "true"
+    ports:
+      - "1883:1883"
+    security_opt:
+      - no-new-privileges:true
+
+  mosquitto:
+    image: eclipse-mosquitto:2
+    volumes:
+      - ./docker/mosquitto.conf:/mosquitto/config/mosquitto.conf:ro
+    ports:
+      - "1884:1883"
+    security_opt:
+      - no-new-privileges:true
+
+  hivemq:
+    image: hivemq/hivemq-ce:latest
+    ports:
+      - "1886:1883"
+    security_opt:
+      - no-new-privileges:true
+
+  nanomq:
+    image: emqx/nanomq:latest
+    ports:
+      - "1887:1883"
+    security_opt:
+      - no-new-privileges:true
