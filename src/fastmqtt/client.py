@@ -126,7 +126,7 @@ class Subscription:
         self._filters = filters
         self._qos = qos
         self._auto_ack = auto_ack
-        self._queue: asyncio.Queue[Message] = asyncio.Queue(receive_buffer_size)
+        self._queue: asyncio.Queue[Message] = asyncio.Queue(receive_buffer_size or 1000)
         self._relay_tasks: list[asyncio.Task[None]] = []
         self._no_local = no_local
         self._retain_as_published = retain_as_published
