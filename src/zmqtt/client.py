@@ -67,7 +67,7 @@ class MQTTClientV311(Protocol):
         *filters: str,
         qos: QoS = QoS.AT_MOST_ONCE,
         auto_ack: bool = True,
-        receive_buffer_size: int = 0,
+        receive_buffer_size: int = 1000,
     ) -> "Subscription": ...
 
     async def ping(self, timeout: float = 10.0) -> float: ...
@@ -94,7 +94,7 @@ class MQTTClientV5(Protocol):
         *filters: str,
         qos: QoS = QoS.AT_MOST_ONCE,
         auto_ack: bool = True,
-        receive_buffer_size: int = 0,
+        receive_buffer_size: int = 1000,
         no_local: bool = False,
         retain_as_published: bool = False,
     ) -> "Subscription": ...
@@ -118,7 +118,7 @@ class Subscription:
         filters: list[str],
         qos: QoS,
         auto_ack: bool = True,
-        receive_buffer_size: int = 0,
+        receive_buffer_size: int = 1000,
         no_local: bool = False,
         retain_as_published: bool = False,
     ) -> None:
@@ -126,7 +126,7 @@ class Subscription:
         self._filters = filters
         self._qos = qos
         self._auto_ack = auto_ack
-        self._queue: asyncio.Queue[Message] = asyncio.Queue(receive_buffer_size or 1000)
+        self._queue: asyncio.Queue[Message] = asyncio.Queue(receive_buffer_size)
         self._relay_tasks: list[asyncio.Task[None]] = []
         self._no_local = no_local
         self._retain_as_published = retain_as_published
@@ -296,7 +296,7 @@ class MQTTClient:
         *filters: str,
         qos: QoS = QoS.AT_MOST_ONCE,
         auto_ack: bool = True,
-        receive_buffer_size: int = 0,
+        receive_buffer_size: int = 1000,
         no_local: bool = False,
         retain_as_published: bool = False,
     ) -> Subscription:
