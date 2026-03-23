@@ -10,6 +10,16 @@ async with client.subscribe("sensors/#") as sub:
         print(msg.topic, msg.payload.decode())
 ```
 
+### Buffering and backpressure
+
+Each `Subscription` buffers incoming messages in an internal queue. The size of this buffer is controlled by the `receive_buffer_size` parameter, see [Backpressure](advanced/backpressure.md)
+
+If `receive_buffer_size` > 0 - limits the queue to that number of messages.
+
+If `receive_buffer_size` == 0 - (default) → a safe default of 1000 messages is used.
+
+When the buffer is full, message delivery is naturally slowed down (backpressure) instead of growing memory usage indefinitely.
+
 ## Async iterator
 
 `async for` loops indefinitely. Break out when you are done:

@@ -73,7 +73,7 @@ class MQTTClientV311(Protocol):
         *filters: str,
         qos: QoS = QoS.AT_MOST_ONCE,
         auto_ack: bool = True,
-        receive_buffer_size: int = 0,
+        receive_buffer_size: int = 1000,
     ) -> "Subscription": ...
 
     async def ping(self, timeout: float = 10.0) -> float: ...
@@ -100,7 +100,7 @@ class MQTTClientV5(Protocol):
         *filters: str,
         qos: QoS = QoS.AT_MOST_ONCE,
         auto_ack: bool = True,
-        receive_buffer_size: int = 0,
+        receive_buffer_size: int = 1000,
         no_local: bool = False,
         retain_as_published: bool = False,
     ) -> "Subscription": ...
@@ -124,7 +124,7 @@ class Subscription:
         filters: list[str],
         qos: QoS,
         auto_ack: bool = True,
-        receive_buffer_size: int = 0,
+        receive_buffer_size: int = 1000,
         no_local: bool = False,
         retain_as_published: bool = False,
     ) -> None:
@@ -290,7 +290,7 @@ class MQTTClient:
         *filters: str,
         qos: QoS = QoS.AT_MOST_ONCE,
         auto_ack: bool = True,
-        receive_buffer_size: int = 0,
+        receive_buffer_size: int = 1000,
         no_local: bool = False,
         retain_as_published: bool = False,
     ) -> Subscription:
