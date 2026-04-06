@@ -1,6 +1,15 @@
 # CHANGELOG
 
 
+## v0.0.3 (2026-04-06)
+
+### Bug Fixes
+
+- 0x09 byte (correlation data) incompatibiity with the specification
+  ([#20](https://github.com/faststream-community/zMQTT/pull/20),
+  [`ebad1ba`](https://github.com/faststream-community/zMQTT/commit/ebad1ba63f14648e190a0d2ad645df21773cc1a7))
+
+
 ## v0.0.2 (2026-04-05)
 
 ### Features
