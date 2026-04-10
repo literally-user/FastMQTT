@@ -37,6 +37,7 @@ class QoS1Flight:
     packet_id: int
     publish: Publish
     future: asyncio.Future[PubAck]
+    retransmit_task: asyncio.Task[None] | None = None
 
 
 class OutboundQoS2State(Enum):
@@ -50,6 +51,7 @@ class OutboundQoS2Flight:
     publish: Publish
     state: OutboundQoS2State
     future: asyncio.Future[PubComp]
+    retransmit_task: asyncio.Task[None] | None = None
 
 
 class InboundQoS2State(Enum):
@@ -89,6 +91,12 @@ class SessionState:
     def clear(self) -> None:
         """Reset all state; called on clean-session connect."""
         self.packet_ids = PacketIdPool()
+        for flight in self.inflight_qos1.values():
+            if flight.retransmit_task is not None:
+                flight.retransmit_task.cancel()
+        for flight in self.inflight_qos2_out.values():
+            if flight.retransmit_task is not None:
+                flight.retransmit_task.cancel()
         self.inflight_qos1.clear()
         self.inflight_qos2_out.clear()
         self.inflight_qos2_in.clear()
