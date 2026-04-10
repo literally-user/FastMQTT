@@ -85,6 +85,14 @@ def _filter_specificity(actual_filter: str) -> tuple[int, ...]:
     return tuple(_segment_rank(s) for s in actual_filter.split("/"))
 
 
+@dataclasses.dataclass(slots=True)
+class ProtocolConfig:
+    keepalive: int = 60
+    ping_timeout: float = 10.0
+    retransmit_interval: float = 5.0
+    version: Literal["3.1.1", "5.0"] = "3.1.1"
+
+
 class MQTTProtocol:
     """MQTT protocol engine.
 
@@ -100,21 +108,20 @@ class MQTTProtocol:
         self,
         transport: Transport,
         state: SessionState,
-        keepalive: int = 60,
-        ping_timeout: float = 10.0,
-        retransmit_interval: float = 5.0,
-        version: Literal["3.1.1", "5.0"] = "3.1.1",
+        config: ProtocolConfig | None = None,
     ) -> None:
-        if retransmit_interval <= 0:
+        if config is None:
+            config = ProtocolConfig()
+        if config.retransmit_interval <= 0:
             msg = "retransmit_interval must be greater than 0"
             raise ValueError(msg)
         self._transport = transport
         self._state = state
-        self._keepalive = keepalive
-        self._ping_timeout = ping_timeout
-        self._retransmit_interval = retransmit_interval
-        self._version: Final = version
-        self._buf = PacketBuffer(version=version)
+        self._keepalive = config.keepalive
+        self._ping_timeout = config.ping_timeout
+        self._retransmit_interval = config.retransmit_interval
+        self._version: Final = config.version
+        self._buf = PacketBuffer(version=config.version)
         self._ping_waiters: list[asyncio.Future[None]] = []
         self._disconnecting = False
         self.started_event = asyncio.Event()
@@ -199,17 +206,17 @@ class MQTTProtocol:
                 pid = self._state.packet_ids.acquire()
                 packet = dataclasses.replace(packet, packet_id=pid)
                 future: asyncio.Future[PubAck] = loop.create_future()
-                flight = QoS1Flight(
+                qos1_flight = QoS1Flight(
                     packet_id=pid,
                     publish=packet,
                     future=future,
                 )
-                self._state.inflight_qos1[pid] = flight
-                flight.retransmit_task = asyncio.create_task(self._retransmit_qos1_publish(pid))
+                self._state.inflight_qos1[pid] = qos1_flight
+                qos1_flight.retransmit_task = asyncio.create_task(self._retransmit_qos1_publish(pid))
                 try:
                     await self._send(self._encode(packet))
                 except BaseException:
-                    self._cancel_retransmit_task(flight.retransmit_task)
+                    self._cancel_retransmit_task(qos1_flight.retransmit_task)
                     self._state.inflight_qos1.pop(pid, None)
                     self._state.packet_ids.release(pid)
                     raise
@@ -224,18 +231,18 @@ class MQTTProtocol:
                 pid = self._state.packet_ids.acquire()
                 packet = dataclasses.replace(packet, packet_id=pid)
                 future2: asyncio.Future[PubComp] = loop.create_future()
-                flight = OutboundQoS2Flight(
+                qos2_flight = OutboundQoS2Flight(
                     packet_id=pid,
                     publish=packet,
                     state=OutboundQoS2State.PENDING_PUBREC,
                     future=future2,
                 )
-                self._state.inflight_qos2_out[pid] = flight
-                flight.retransmit_task = asyncio.create_task(self._retransmit_qos2_publish(pid))
+                self._state.inflight_qos2_out[pid] = qos2_flight
+                qos2_flight.retransmit_task = asyncio.create_task(self._retransmit_qos2_publish(pid))
                 try:
                     await self._send(self._encode(packet))
                 except BaseException:
-                    self._cancel_retransmit_task(flight.retransmit_task)
+                    self._cancel_retransmit_task(qos2_flight.retransmit_task)
                     self._state.inflight_qos2_out.pop(pid, None)
                     self._state.packet_ids.release(pid)
                     raise

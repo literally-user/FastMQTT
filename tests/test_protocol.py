@@ -14,8 +14,8 @@ import pytest
 
 from zmqtt._internal.packets.codec import decode, encode
 from zmqtt._internal.packets.connect import ConnAck, Connect
-from zmqtt._internal.packets.publish import PubAck, PubComp, PubRec, PubRel, Publish
-from zmqtt._internal.protocol import MQTTProtocol
+from zmqtt._internal.packets.publish import PubAck, PubComp, Publish, PubRec, PubRel
+from zmqtt._internal.protocol import MQTTProtocol, ProtocolConfig
 from zmqtt._internal.state import SessionState, SubscriptionEntry
 from zmqtt._internal.types.message import Message
 from zmqtt._internal.types.qos import QoS
@@ -62,9 +62,11 @@ def make_protocol(
     protocol = MQTTProtocol(
         transport,
         state,
-        keepalive=keepalive,
-        ping_timeout=ping_timeout,
-        retransmit_interval=retransmit_interval,
+        config=ProtocolConfig(
+            keepalive=keepalive,
+            ping_timeout=ping_timeout,
+            retransmit_interval=retransmit_interval,
+        ),
     )
     return protocol, transport
 
@@ -92,12 +94,12 @@ def _decoded_sent(transport: FakeTransport) -> list[object]:
 
 
 async def _wait_until(predicate: Callable[[], bool], timeout: float = 1.0) -> None:
-    async def _poll() -> None:
-        while not predicate():
-            await asyncio.sleep(0)
+    start = asyncio.get_running_loop().time()
 
-    await asyncio.wait_for(_poll(), timeout=timeout)
-
+    while not predicate():
+        if asyncio.get_running_loop().time() - start > timeout:
+            raise asyncio.TimeoutError
+        await asyncio.sleep(0.01)
 
 async def test_connect_refused_raises() -> None:
     protocol, transport = make_protocol()

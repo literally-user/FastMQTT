@@ -91,12 +91,12 @@ class SessionState:
     def clear(self) -> None:
         """Reset all state; called on clean-session connect."""
         self.packet_ids = PacketIdPool()
-        for flight in self.inflight_qos1.values():
-            if flight.retransmit_task is not None:
-                flight.retransmit_task.cancel()
-        for flight in self.inflight_qos2_out.values():
-            if flight.retransmit_task is not None:
-                flight.retransmit_task.cancel()
+        for qos1_flight in self.inflight_qos1.values():
+            if qos1_flight.retransmit_task is not None:
+                qos1_flight.retransmit_task.cancel()
+        for qos2_flight in self.inflight_qos2_out.values():
+            if qos2_flight.retransmit_task is not None:
+                qos2_flight.retransmit_task.cancel()
         self.inflight_qos1.clear()
         self.inflight_qos2_out.clear()
         self.inflight_qos2_in.clear()
