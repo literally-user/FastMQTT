@@ -101,6 +101,7 @@ async def _wait_until(predicate: Callable[[], bool], timeout: float = 1.0) -> No
             raise asyncio.TimeoutError
         await asyncio.sleep(0.01)
 
+
 async def test_connect_refused_raises() -> None:
     protocol, transport = make_protocol()
     connect = Connect(client_id="test", clean_session=True, keepalive=60)
