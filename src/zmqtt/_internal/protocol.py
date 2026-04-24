@@ -224,7 +224,11 @@ class MQTTProtocol:
                     "Published QoS 1",
                     extra={"topic": packet.topic, "packet_id": pid},
                 )
-                return await future
+                try:
+                    return await future
+                except BaseException:
+                    self._abandon_qos1_publish(qos1_flight)
+                    raise
 
             case QoS.EXACTLY_ONCE:
                 loop = asyncio.get_running_loop()
@@ -250,7 +254,11 @@ class MQTTProtocol:
                     "Published QoS 2",
                     extra={"topic": packet.topic, "packet_id": pid},
                 )
-                return await future2
+                try:
+                    return await future2
+                except BaseException:
+                    self._abandon_qos2_publish(qos2_flight)
+                    raise
 
     async def subscribe(
         self,
@@ -546,6 +554,22 @@ class MQTTProtocol:
     def _cancel_retransmit_task(self, task: asyncio.Task[None] | None) -> None:
         if task is not None and not task.done():
             task.cancel()
+
+    def _abandon_qos1_publish(self, flight: QoS1Flight) -> None:
+        current = self._state.inflight_qos1.get(flight.packet_id)
+        if current is not flight:
+            return
+        self._state.inflight_qos1.pop(flight.packet_id, None)
+        self._cancel_retransmit_task(flight.retransmit_task)
+        self._state.packet_ids.release(flight.packet_id)
+
+    def _abandon_qos2_publish(self, flight: OutboundQoS2Flight) -> None:
+        current = self._state.inflight_qos2_out.get(flight.packet_id)
+        if current is not flight:
+            return
+        self._state.inflight_qos2_out.pop(flight.packet_id, None)
+        self._cancel_retransmit_task(flight.retransmit_task)
+        self._state.packet_ids.release(flight.packet_id)
 
     async def _send(self, data: bytes) -> None:
         log.debug("Sending %d bytes", len(data))

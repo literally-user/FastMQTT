@@ -296,3 +296,54 @@ async def test_qos2_duplicate_pubrec_resends_pubrel() -> None:
     transport.feed(encode(PubComp(packet_id=packet_id), version="3.1.1"))
     await asyncio.wait_for(publish_task, timeout=1.0)
     await _stop_task(read_task)
+
+
+async def test_qos1_publish_timeout_abandons_retransmit() -> None:
+    protocol, transport = make_protocol(retransmit_interval=0.02)
+
+    with pytest.raises(asyncio.TimeoutError):
+        await asyncio.wait_for(
+            protocol.publish(
+                Publish(
+                    topic="t/x",
+                    payload=b"once",
+                    qos=QoS.AT_LEAST_ONCE,
+                    retain=False,
+                    dup=False,
+                ),
+            ),
+            timeout=0.001,
+        )
+
+    await asyncio.sleep(0.05)
+
+    publishes = [packet for packet in _decoded_sent(transport) if isinstance(packet, Publish)]
+    assert len(publishes) == 1
+    assert protocol._state.inflight_qos1 == {}
+
+
+async def test_qos2_publish_timeout_abandons_retransmit() -> None:
+    protocol, transport = make_protocol(retransmit_interval=0.02)
+
+    with pytest.raises(asyncio.TimeoutError):
+        await asyncio.wait_for(
+            protocol.publish(
+                Publish(
+                    topic="t/x",
+                    payload=b"once",
+                    qos=QoS.EXACTLY_ONCE,
+                    retain=False,
+                    dup=False,
+                ),
+            ),
+            timeout=0.001,
+        )
+
+    await asyncio.sleep(0.05)
+
+    packets = _decoded_sent(transport)
+    publishes = [packet for packet in packets if isinstance(packet, Publish)]
+    pubrels = [packet for packet in packets if isinstance(packet, PubRel)]
+    assert len(publishes) == 1
+    assert pubrels == []
+    assert protocol._state.inflight_qos2_out == {}
